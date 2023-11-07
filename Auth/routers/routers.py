@@ -6,7 +6,7 @@ from starlette import status
 from typing import Annotated
 
 
-from Auth.database import MongoDBManager
+from database import MongoDBManager
 from Auth.models.models import UserCreate
 from Auth.validators.validators import EmailValidator, PasswordValidator
 

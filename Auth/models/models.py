@@ -2,8 +2,6 @@ from fastapi import Depends
 from bson import ObjectId
 from pydantic import BaseModel, EmailStr
 from Auth.validators.validators import (
-    EmailValidator,
-    PasswordValidator,
     RoleChoices,
 )
 

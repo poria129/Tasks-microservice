@@ -1,14 +1,24 @@
+from datetime import datetime
 from pydantic import BaseModel
-import datetime
+
+
+from Tasks.validators.validators import StatusChoices, PriorityChoices
 
 
 class Tasks(BaseModel):
     subject: str
-    status: list[str]
-    project: list[str]
+    status: StatusChoices
+    project: str
     is_group: bool
-    priority: list[str]
+    priority: PriorityChoices
     detail: str
     participators: list[str]
-    created_date: datetime
-    updated_date: datetime
+    updated_at: datetime
+    created_at: datetime
+
+    def update_timestamp(self):
+        self.updated_at = datetime.now()
+
+    def create_timestamp(self):
+        self.updated_at = datetime.now()
+        self.created_at = datetime.now()

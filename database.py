@@ -30,5 +30,13 @@ class MongoDBManager:
         return self.get_database("auth_db")
 
     @property
+    def tasks_db(self):
+        return self.get_database("tasks_db")
+
+    @property
     def auth(self):
         return self.auth_db["auth"]
+
+    @property
+    def tasks(self):
+        return self.tasks_db["tasks"]

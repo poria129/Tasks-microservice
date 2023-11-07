@@ -1,4 +1,4 @@
-from Auth.database import MongoDBManager
+from database import MongoDBManager
 from enum import Enum
 from fastapi import HTTPException
 from passlib.context import CryptContext
