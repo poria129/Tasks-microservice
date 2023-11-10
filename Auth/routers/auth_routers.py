@@ -1,8 +1,8 @@
+from bson import ObjectId
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWSError, jwt
-from starlette import status
 from typing import Annotated
 
 
@@ -19,7 +19,7 @@ def get_collection():
         return user_collection
 
 
-@router.post("/")
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def create_user(email: EmailValidator, password: PasswordValidator, user: UserCreate):
     get_email = dict(email)
     get_password = dict(password)
@@ -29,7 +29,7 @@ def create_user(email: EmailValidator, password: PasswordValidator, user: UserCr
     get_collection().insert_one(result_dict)
 
 
-@router.get("/")
+@router.get("/", status_code=status.HTTP_200_OK)
 def get_users():
     pipeline = [{"$match": {}}]
 
@@ -40,9 +40,15 @@ def get_users():
     return user_list
 
 
-# @router.put("/{id}")
+@router.put("/{id}", status_code=status.HTTP_200_OK)
+def edit_user(id: str, edit_user):
+    pass
 
-# @router.delete("/{id}")
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(id: str):
+    get_collection().find_one_and_delete({"_id": ObjectId(id)})
+
 
 # Login for JWT and dependencies
 
@@ -91,7 +97,7 @@ def get_user_by_email(email: str):
     return None
 
 
-@router.post("/token")
+@router.post("/token", status_code=status.HTTP_200_OK)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user_by_email(form_data.username)
     if not user:

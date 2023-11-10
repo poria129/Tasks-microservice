@@ -9,6 +9,7 @@ pymongo = "==3.11"
 uvicorn = "*"
 passlib = {extras = ["bcrypt"], version = "*"}
 python-jose = "*"
+pika = "*"
 
 [dev-packages]
 

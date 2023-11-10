@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body, Path
+from fastapi import APIRouter, HTTPException, status, Body, Path
 from bson import ObjectId
 from Tasks.models.models import CreateTasks, UpdateTasks, JoinTask
 from database import MongoDBManager
@@ -12,12 +12,12 @@ def get_collection():
         return task_collection
 
 
-@router.post("/")
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def create_tasks(task: CreateTasks):
     get_collection().insert_one(dict(task))
 
 
-@router.get("/")
+@router.get("/", status_code=status.HTTP_200_OK)
 def get_tasks():
     pipeline = [{"$match": {}}]
 
@@ -28,10 +28,14 @@ def get_tasks():
     return tasks_list
 
 
-@router.put("/tasks/{id}/update-fields", response_model=UpdateTasks)
+@router.put(
+    "/tasks/{id}/update-task",
+    response_model=UpdateTasks,
+    status_code=status.HTTP_200_OK,
+)
 def update_task(
     id: str = Path(..., title="Task ID"),
-    fields: UpdateTasks = Body(..., title="Fields to Update"),
+    fields: UpdateTasks = Body(..., title="Tasks to Update"),
 ):
     pipeline = [
         {"$match": {"_id": ObjectId(id)}},
@@ -71,6 +75,6 @@ def join_the_task(id: str, task: JoinTask):
     pass
 
 
-@router.delete("/{id}")
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(id: str):
-    pass
+    get_collection().find_one_and_delete({"_id": ObjectId(id)})
