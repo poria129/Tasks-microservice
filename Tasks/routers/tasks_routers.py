@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Body, Path
 from bson import ObjectId
+
+from Tasks.services.services import receive_jwt_from_rabbitmq
 from Tasks.models.models import CreateTasks, UpdateTasks, JoinTask
 from database import MongoDBManager
 
@@ -70,9 +72,10 @@ def update_task(
     return updated_fields
 
 
-@router.put("/join/{id}")
-def join_the_task(id: str, task: JoinTask):
-    pass
+@router.get("/join/")
+def join_the_task():
+    receive_jwt_from_rabbitmq()
+    return user
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)

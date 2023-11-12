@@ -1,6 +1,6 @@
 from bson import ObjectId
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWSError, jwt
 from typing import Annotated
@@ -8,6 +8,7 @@ from typing import Annotated
 
 from database import MongoDBManager
 from Auth.models.models import UserCreate
+from Auth.services.services import send_jwt_through_rabbitmq
 from Auth.validators.validators import EmailValidator, PasswordValidator
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -75,11 +76,12 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         id: str = payload.get("id")
-        if email is None or id is None:
+        role: str = payload.get("role")
+        if email is None or id is None or role is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate"
             )
-        return {"email": email, "id": id}
+        return {"email": email, "id": id, "role": role}
     except JWSError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate"
@@ -98,7 +100,10 @@ def get_user_by_email(email: str):
 
 
 @router.post("/token", status_code=status.HTTP_200_OK)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+):
     user = get_user_by_email(form_data.username)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
@@ -108,7 +113,10 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user["email"], "id": str(user["_id"])},
+        data={"sub": user["email"], "id": str(user["_id"]), "role": user["role"]},
         expires_delta=access_token_expires,
     )
+
+    background_tasks.add_task(send_jwt_through_rabbitmq, access_token, background_tasks)
+
     return {"access_token": access_token, "token_type": "bearer"}
