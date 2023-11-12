@@ -74,8 +74,7 @@ def update_task(
 
 @router.get("/join/")
 def join_the_task():
-    receive_jwt_from_rabbitmq()
-    return user
+    return receive_jwt_from_rabbitmq()
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -32,29 +32,18 @@ def get_current_user(token: str):
 def receive_jwt_from_rabbitmq():
     connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
     channel = connection.channel()
-    channel.queue_declare(queue="jwt_queue", durable=True)
 
-    def callback(ch, method, properties, body):
-        global user
-        # print(f"Received JWT: {body}")
-        user = get_current_user(body)
-        # print(f"{user}")
-        return user
+    channel.queue_declare(queue="auth_queue")
 
-    channel.basic_consume(
-        queue="jwt_queue", on_message_callback=callback, auto_ack=True
-    )
+    method_frame, header_frame, body = channel.basic_get(queue="auth_queue")
+    if method_frame:
+        channel.basic_ack(method_frame.delivery_tag)
+        jwt = body.decode("utf-8")
+        content_type = header_frame.content_type
+        expiration = header_frame.expiration
+    else:
+        jwt = None
 
-    print("Waiting for JWT. To exit press CTRL+C")
-    channel.start_consuming()
+    connection.close()
 
-
-if __name__ == "__main__":
-    try:
-        receive_jwt_from_rabbitmq()
-    except KeyboardInterrupt:
-        print("Interrupted")
-        try:
-            sys.exit(0)
-        except SystemExit:
-            os._exit(0)
+    return get_current_user(jwt)
