@@ -1,9 +1,5 @@
-from fastapi import Depends
-from bson import ObjectId
 from pydantic import BaseModel, EmailStr
-from Auth.validators.validators import (
-    RoleChoices,
-)
+from Auth.validators.validators import EmailValidator, PasswordValidator, RoleChoices
 
 
 class UserCreate(BaseModel):
@@ -14,4 +10,8 @@ class UserCreate(BaseModel):
 
 
 class GetUser(UserCreate):
+    email: EmailStr
+
+
+class EditUser(UserCreate):
     email: EmailStr

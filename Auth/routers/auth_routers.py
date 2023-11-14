@@ -7,7 +7,7 @@ from typing import Annotated
 
 
 from database import MongoDBManager
-from Auth.models.models import UserCreate
+from Auth.models.models import EditUser, UserCreate
 from Auth.services.services import send_jwt_through_rabbitmq
 from Auth.validators.validators import EmailValidator, PasswordValidator
 
@@ -42,13 +42,30 @@ def get_users():
 
 
 @router.put("/{id}", status_code=status.HTTP_200_OK)
-def edit_user(id: str, edit_user):
-    pass
+def edit_user(id: str, fields: EditUser):
+    try:
+        result = get_collection().find_one_and_update(
+            {"_id": ObjectId(id)}, {"$set": dict(fields)}, return_document=True
+        )
+        if result is None:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(id: str):
-    get_collection().find_one_and_delete({"_id": ObjectId(id)})
+    try:
+        result = get_collection().find_one_and_delete({"_id": ObjectId(id)})
+
+        if result is None:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 # Login for JWT and dependencies
@@ -117,6 +134,10 @@ def login_for_access_token(
         expires_delta=access_token_expires,
     )
 
-    background_tasks.add_task(send_jwt_through_rabbitmq, access_token, background_tasks)
+    background_tasks.add_task(
+        send_jwt_through_rabbitmq,
+        access_token,
+        background_tasks,
+    )
 
     return {"access_token": access_token, "token_type": "bearer"}

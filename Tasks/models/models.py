@@ -39,5 +39,9 @@ class CreateTasks(Tasks):
         self.created_at = str(datetime.now())
 
 
-class JoinTask(Tasks):
-    participators: list[str]
+class JoinTask(BaseModel):
+    participators: list[str] | None = None
+    updated_at: datetime | None = None
+
+    def update_timestamp(self):
+        self.updated_at = datetime.now()

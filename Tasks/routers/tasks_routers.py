@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status, Body, Path
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Path
 from bson import ObjectId
 
-from Tasks.services.services import receive_jwt_from_rabbitmq
+from Tasks.services.dependencies import get_current_user, get_current_staff_user
 from Tasks.models.models import CreateTasks, UpdateTasks, JoinTask
 from database import MongoDBManager
 
@@ -20,7 +21,7 @@ def create_tasks(task: CreateTasks):
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
-def get_tasks():
+def get_tasks(current_user: dict = Depends(get_current_staff_user)):
     pipeline = [{"$match": {}}]
 
     tasks = list(get_collection().aggregate(pipeline))
@@ -38,6 +39,7 @@ def get_tasks():
 def update_task(
     id: str = Path(..., title="Task ID"),
     fields: UpdateTasks = Body(..., title="Tasks to Update"),
+    current_user: dict = Depends(get_current_staff_user),
 ):
     pipeline = [
         {"$match": {"_id": ObjectId(id)}},
@@ -72,9 +74,32 @@ def update_task(
     return updated_fields
 
 
-@router.get("/join/")
-def join_the_task():
-    return receive_jwt_from_rabbitmq()
+@router.put("/tasks/{task_id}/update-participators", response_model=JoinTask)
+def update_task_participators(
+    task_id: int = Path(
+        ..., title="Task ID", description="The ID of the task to update"
+    ),
+    current_user: dict = Depends(get_current_user),
+    join_task: JoinTask = Depends(),
+):
+    if current_user["id"] in join_task.participators:
+        raise HTTPException(status_code=409, detail="User already joined!")
+
+    updated_task = get_collection().find_one_and_update(
+        {"_id": task_id},
+        {
+            "$push": {"participators": current_user["id"]},
+            "$set": {"updated_at": datetime.now()},
+        },
+        projection={"_id": False},
+        return_document=False,
+    )
+    if not updated_task:
+        raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found")
+
+    return {
+        "message": f"User {current_user['id']} added to participators of task {task_id}"
+    }
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
