@@ -76,7 +76,7 @@ def update_task(
 
 @router.put("/tasks/{task_id}/update-participators", response_model=JoinTask)
 def update_task_participators(
-    task_id: int = Path(
+    task_id: str = Path(
         ..., title="Task ID", description="The ID of the task to update"
     ),
     current_user: dict = Depends(get_current_user),
@@ -86,13 +86,11 @@ def update_task_participators(
         raise HTTPException(status_code=409, detail="User already joined!")
 
     updated_task = get_collection().find_one_and_update(
-        {"_id": task_id},
+        {"_id": ObjectId(task_id)},
         {
             "$push": {"participators": current_user["id"]},
             "$set": {"updated_at": datetime.now()},
         },
-        projection={"_id": False},
-        return_document=False,
     )
     if not updated_task:
         raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found")
